@@ -1,0 +1,5 @@
+[submodule "vendor/uv"]
+	path = vendor/uv
+	url = https://github.com/aphrody-labs/uv.git
+	branch = bun-0.12.24
+	shallow = true

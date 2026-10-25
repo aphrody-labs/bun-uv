@@ -1,0 +1,444 @@
+[workspace]
+resolver = "3"
+members = ["plugin"]
+exclude = ["vendor"]
+
+[workspace.package]
+version = "1.4.7"
+edition = "2024"
+rust-version = "1.97"
+license = "MIT"
+repository = "https://github.com/aphrody-labs/bun-uv"
+
+[workspace.dependencies]
+
+[workspace.lints.rust]
+# Every rustc warning is an error. Individual lints below can override this
+# back to "warn" (their priority 0 beats the group's -1) where a warning level
+# is intentional.
+warnings = { level = "deny", priority = -1 }
+# `bun_asan` / `bun_debug` / `socket_fault_injection` are set via RUSTFLAGS
+# (`--cfg=...` + `--check-cfg=cfg(...)`) by scripts/build/rust.ts; register
+# them here so a plain `cargo build` / `cargo check` (without those flags)
+# doesn't warn.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(bun_asan)', 'cfg(bun_debug)', 'cfg(socket_fault_injection)', 'cfg(bun_disallow_code_generation_from_strings)', 'cfg(bun_sema_mimalloc)'] }
+# link.exe unconditionally prints "Creating library X.dll.lib and object
+# X.dll.exp" to stdout when linking each proc-macro DLL on Windows hosts;
+# there is no linker flag to suppress it. The lint already exempts itself
+# from `-D warnings`, so this only silences the noise.
+linker_messages = "allow"
+dead_code = "deny"
+# Every crate in this workspace is an internal implementation detail of one
+# binary, so `pub` is a claim that *another crate* imports the item. If it
+# doesn't, write `pub(crate)` — that keeps the item under `dead_code` analysis
+# instead of being exempted as an external API root. Macro-generated items that
+# must stay `pub` carry `#[allow(unreachable_pub)]` at the expansion site.
+unreachable_pub = "deny"
+unused_imports = "deny"
+unused_variables = "deny"
+unused_mut = "deny"
+unused_assignments = "deny"
+unused_macros = "deny"
+unreachable_code = "deny"
+unreachable_patterns = "deny"
+
+[workspace.lints.clippy]
+# == provenance-safe pointer casts ==
+# Prefer `.cast::<T>()` / `.cast_const()` / `.cast_mut()` / `ptr::from_ref` /
+# `ptr::from_mut` over `as *const T` / `as *mut T`. The method forms cannot
+# accidentally change mutability or perform a ref→raw coercion in one step,
+# and they preserve provenance under Strict Provenance.
+ptr_as_ptr = "deny"
+ptr_cast_constness = "deny"
+ref_as_ptr = "deny"
+borrow_as_ptr = "deny"
+
+# == soundness / leak prevention ==
+undocumented_unsafe_blocks = "deny"
+not_unsafe_ptr_arg_deref = "deny"
+mem_forget = "deny"
+cast_ptr_alignment = "deny"
+transmute_ptr_to_ptr = "deny"
+as_ptr_cast_mut = "deny"
+drop_non_drop = "deny"
+uninit_vec = "deny"
+
+# == performance ==
+redundant_clone = "deny"
+unnecessary_to_owned = "deny"
+needless_collect = "deny"
+or_fun_call = "deny"
+assigning_clones = "deny"
+implicit_clone = "deny"
+iter_overeager_cloned = "deny"
+map_clone = "deny"
+trivially_copy_pass_by_ref = "deny"
+large_types_passed_by_value = "deny"
+large_enum_variant = "deny"
+large_stack_frames = "deny"
+vec_init_then_push = "deny"
+format_collect = "deny"
+manual_memcpy = "deny"
+needless_pass_by_value = "deny"
+
+# == clarity / api hygiene ==
+unnecessary_unwrap = "deny"
+derive_partial_eq_without_eq = "deny"
+derivable_impls = "deny"
+clone_on_ref_ptr = "deny"
+if_same_then_else = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+clone_on_copy = "deny"
+useless_conversion = "deny"
+# vec_box / boxed_local: legit patterns are `#[expect]`-suppressed at the site
+# with a one-line "why the box is load-bearing" comment (intrusive-list address
+# stability, JsClass finalizer thunk contract). Anything new must justify itself.
+vec_box = "deny"
+boxed_local = "deny"
+arc_with_non_send_sync = "deny"
+manual_swap = "deny"
+mem_replace_option_with_none = "deny"
+redundant_locals = "deny"
+manual_c_str_literals = "deny"
+precedence = "deny"
+implicit_saturating_sub = "deny"
+ptr_eq = "deny"
+
+# == disallowed-* (configured in clippy.toml) ==
+disallowed_methods = "deny"
+disallowed_types = "deny"
+disallowed_macros = "deny"
+
+# == explicitly allowed (Zig-port style; intentional) ==
+collapsible_if = "allow"
+collapsible_else_if = "allow"
+collapsible_match = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+len_zero = "allow"
+len_without_is_empty = "allow"
+needless_return = "allow"
+module_inception = "allow"
+missing_safety_doc = "allow"
+let_unit_value = "allow"
+needless_update = "allow"
+explicit_auto_deref = "allow"
+doc_lazy_continuation = "allow"
+doc_overindented_list_items = "allow"
+enum_variant_names = "allow"
+upper_case_acronyms = "allow"
+wrong_self_convention = "allow"
+should_implement_trait = "allow"
+new_without_default = "allow"
+self_named_constructors = "allow"  # Zig-port `Type::init()` constructor convention
+single_match = "allow"
+manual_range_contains = "allow"
+needless_lifetimes = "allow"
+needless_range_loop = "allow"
+while_let_loop = "allow"
+while_let_on_iterator = "allow"
+blocks_in_conditions = "allow"
+diverging_sub_expression = "allow"
+declare_interior_mutable_const = "allow"
+empty_line_after_doc_comments = "allow"
+empty_docs = "allow"
+excessive_precision = "allow"
+unreadable_literal = "allow"
+approx_constant = "allow"
+result_unit_err = "allow"
+only_used_in_recursion = "allow"
+# `as u32` etc. is identity on some libc targets, required widen on others
+unnecessary_cast = "allow"
+new_ret_no_self = "allow"
+map_identity = "allow"
+
+# Profiles copied from aphrody-labs/bun Cargo.toml: scripts/build/plugins.ts builds with --profile plugin (release) or dev.
+[profile.release]
+lto = "off"
+codegen-units = 1
+debug = "line-tables-only"
+strip = "none"
+panic = "abort"
+
+[profile.plugin]
+inherits = "release"
+debug = false
+strip = true
+
+[profile.dev]
+panic = "abort"
+split-debuginfo = "unpacked"
+
+# zlib-rs is absorbed in the Bun checkout's src/zlib_rs, as in the Bun workspace.
+[patch.crates-io]
+zlib-rs = { path = "../../src/zlib_rs" }
+
+[profile.release.package.uv]
+opt-level = "z"
+
+[profile.release.package.uv-audit]
+opt-level = "z"
+
+[profile.release.package.uv-audit-operations]
+opt-level = "z"
+
+[profile.release.package.uv-auth]
+opt-level = "z"
+
+[profile.release.package.uv-bin-install]
+opt-level = "z"
+
+[profile.release.package.uv-build-backend]
+opt-level = "z"
+
+[profile.release.package.uv-build-commands]
+opt-level = "z"
+
+[profile.release.package.uv-build-frontend]
+opt-level = "z"
+
+[profile.release.package.uv-cache]
+opt-level = "z"
+
+[profile.release.package.uv-cache-info]
+opt-level = "z"
+
+[profile.release.package.uv-cache-key]
+opt-level = "z"
+
+[profile.release.package.uv-cli]
+opt-level = "z"
+
+[profile.release.package.uv-client]
+opt-level = "z"
+
+[profile.release.package.uv-command-support]
+opt-level = "z"
+
+[profile.release.package.uv-configuration]
+opt-level = "z"
+
+[profile.release.package.uv-console]
+opt-level = "z"
+
+[profile.release.package.uv-dirs]
+opt-level = "z"
+
+[profile.release.package.uv-dispatch]
+opt-level = "z"
+
+[profile.release.package.uv-distribution]
+opt-level = "z"
+
+[profile.release.package.uv-distribution-filename]
+opt-level = "z"
+
+[profile.release.package.uv-distribution-types]
+opt-level = "z"
+
+[profile.release.package.uv-environment-operations]
+opt-level = "z"
+
+[profile.release.package.uv-errors]
+opt-level = "z"
+
+[profile.release.package.uv-extract]
+opt-level = "z"
+
+[profile.release.package.uv-fastid]
+opt-level = "z"
+
+[profile.release.package.uv-flags]
+opt-level = "z"
+
+[profile.release.package.uv-fs]
+opt-level = "z"
+
+[profile.release.package.uv-git]
+opt-level = "z"
+
+[profile.release.package.uv-git-types]
+opt-level = "z"
+
+[profile.release.package.uv-globfilter]
+opt-level = "z"
+
+[profile.release.package.uv-install-operations]
+opt-level = "z"
+
+[profile.release.package.uv-install-wheel]
+opt-level = "z"
+
+[profile.release.package.uv-installer]
+opt-level = "z"
+
+[profile.release.package.uv-keyring]
+opt-level = "z"
+
+[profile.release.package.uv-lock]
+opt-level = "z"
+
+[profile.release.package.uv-lock-operations]
+opt-level = "z"
+
+[profile.release.package.uv-logging]
+opt-level = "z"
+
+[profile.release.package.uv-metadata]
+opt-level = "z"
+
+[profile.release.package.uv-netrc]
+opt-level = "z"
+
+[profile.release.package.uv-normalize]
+opt-level = "z"
+
+[profile.release.package.uv-once-map]
+opt-level = "z"
+
+[profile.release.package.uv-options-metadata]
+opt-level = "z"
+
+[profile.release.package.uv-pep440]
+opt-level = "z"
+
+[profile.release.package.uv-pep508]
+opt-level = "z"
+
+[profile.release.package.uv-pip-commands]
+opt-level = "z"
+
+[profile.release.package.uv-platform]
+opt-level = "z"
+
+[profile.release.package.uv-platform-tags]
+opt-level = "z"
+
+[profile.release.package.uv-preview]
+opt-level = "z"
+
+[profile.release.package.uv-project-commands]
+opt-level = "z"
+
+[profile.release.package.uv-project-edit]
+opt-level = "z"
+
+[profile.release.package.uv-publish]
+opt-level = "z"
+
+[profile.release.package.uv-publish-commands]
+opt-level = "z"
+
+[profile.release.package.uv-pypi-types]
+opt-level = "z"
+
+[profile.release.package.uv-python-commands]
+opt-level = "z"
+
+[profile.release.package.uv-python-discovery]
+opt-level = "z"
+
+[profile.release.package.uv-python-interpreter]
+opt-level = "z"
+
+[profile.release.package.uv-python-managed]
+opt-level = "z"
+
+[profile.release.package.uv-python-types]
+opt-level = "z"
+
+[profile.release.package.uv-redacted]
+opt-level = "z"
+
+[profile.release.package.uv-requirements]
+opt-level = "z"
+
+[profile.release.package.uv-requirements-txt]
+opt-level = "z"
+
+[profile.release.package.uv-resolve-operations]
+opt-level = "z"
+
+[profile.release.package.uv-resolver]
+opt-level = "z"
+
+[profile.release.package.uv-resolver-types]
+opt-level = "z"
+
+[profile.release.package.uv-scripts]
+opt-level = "z"
+
+[profile.release.package.uv-settings]
+opt-level = "z"
+
+[profile.release.package.uv-shell]
+opt-level = "z"
+
+[profile.release.package.uv-small-str]
+opt-level = "z"
+
+[profile.release.package.uv-state]
+opt-level = "z"
+
+[profile.release.package.uv-static]
+opt-level = "z"
+
+[profile.release.package.uv-threads]
+opt-level = "z"
+
+[profile.release.package.uv-toml]
+opt-level = "z"
+
+[profile.release.package.uv-tool]
+opt-level = "z"
+
+[profile.release.package.uv-tool-commands]
+opt-level = "z"
+
+[profile.release.package.uv-torch]
+opt-level = "z"
+
+[profile.release.package.uv-trampoline-builder]
+opt-level = "z"
+
+[profile.release.package.uv-types]
+opt-level = "z"
+
+[profile.release.package.uv-unix]
+opt-level = "z"
+
+[profile.release.package.uv-version]
+opt-level = "z"
+
+[profile.release.package.uv-virtualenv]
+opt-level = "z"
+
+[profile.release.package.uv-warnings]
+opt-level = "z"
+
+[profile.release.package.uv-windows]
+opt-level = "z"
+
+[profile.release.package.uv-workspace]
+opt-level = "z"
+
+[profile.release.package.uv-workspace-commands]
+opt-level = "z"
+
+[profile.release.package.hyper]
+opt-level = "z"
+
+[profile.release.package.hyper-util]
+opt-level = "z"
+
+[profile.release.package.h2]
+opt-level = "z"
+
+[profile.release.package.reqwest]
+opt-level = "z"
+
+[profile.release.package.tower]
+opt-level = "z"
+
