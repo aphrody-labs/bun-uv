@@ -171,9 +171,6 @@ strip = true
 panic = "abort"
 split-debuginfo = "unpacked"
 
-# zlib-rs is absorbed in the Bun checkout's src/zlib_rs, as in the Bun workspace.
-[patch.crates-io]
-zlib-rs = { path = "../../src/zlib_rs" }
 
 [profile.release.package.uv]
 opt-level = "z"
